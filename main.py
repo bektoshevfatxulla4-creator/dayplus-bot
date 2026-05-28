@@ -1,4 +1,15 @@
-import asyncio
+import asyncio async def keep_alive():
+    """Render uyquga ketmasligi uchun har 10 daqiqada ping"""
+    import aiohttp
+    url = os.getenv("RENDER_EXTERNAL_URL", "")
+    while True:
+        await asyncio.sleep(600)
+        if url:
+            try:
+                async with aiohttp.ClientSession() as s:
+                    await s.get(url)
+            except Exception:
+                passsssss
 import logging
 import os
 from datetime import datetime, date, timedelta
