@@ -1,15 +1,4 @@
-import asyncio async def keep_alive():
-    """Render uyquga ketmasligi uchun har 10 daqiqada ping"""
-    import aiohttp
-    url = os.getenv("RENDER_EXTERNAL_URL", "")
-    while True:
-        await asyncio.sleep(600)
-        if url:
-            try:
-                async with aiohttp.ClientSession() as s:
-                    await s.get(url)
-            except Exception:
-                passsssss
+import asyncio
 import logging
 import os
 from datetime import datetime, date, timedelta
@@ -855,10 +844,25 @@ async def got_reason(msg: Message, state: FSMContext):
 # MAIN
 # ──────────────────────────────────────────
 
+async def keep_alive():
+    """Render uyquga ketmasligi uchun har 10 daqiqada ping"""
+    import aiohttp
+    url = os.getenv("RENDER_EXTERNAL_URL", "")
+    while True:
+        await asyncio.sleep(600)
+        if url:
+            try:
+                async with aiohttp.ClientSession() as s:
+                    await s.get(url)
+            except Exception:
+                pass
+
+
 async def main():
     init_db()
     start_scheduler(bot)
     logger.info("🚀 Day+ bot ishga tushdi")
+    asyncio.create_task(keep_alive())
     await dp.start_polling(bot)
 
 
