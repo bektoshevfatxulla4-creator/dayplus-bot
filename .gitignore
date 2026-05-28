@@ -1,0 +1,5 @@
+.env  
+venv/  
+dayplus.db  
+generated/  
+__pycache__/ 
