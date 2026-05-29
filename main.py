@@ -38,6 +38,9 @@ dp = Dispatcher(storage=MemoryStorage())
 CATEGORIES = ["🥛 Sut mahsulotlari", "🥩 Go'sht", "🍞 Non va xamirli",
               "🥤 Ichimliklar", "🥫 Konservalar", "🧁 Shirinliklar", "🛒 Boshqa"]
 
+# Chegirma kanali
+CHANNEL_ID = os.getenv("CHANNEL_ID", "@dayplus_chegirma")
+
 
 # ──────────────────────────────────────────
 # FSM States
@@ -825,19 +828,74 @@ async def got_reason(msg: Message, state: FSMContext):
         )
         add_discount(p["id"], data["old_price"], data["new_price"], reason, path)
         pct = round((data["old_price"] - data["new_price"]) / data["old_price"] * 100)
+        publish_kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(
+                text="📢 Kanalga yuborish",
+                callback_data=f"publish:{p['id']}:{data['old_price']}:{data['new_price']}"
+            )]
+        ])
         await msg.answer_photo(
             photo=FSInputFile(path),
             caption=(
                 f"🎨 <b>{p['name']}</b> chegirma rasmi tayyor!\n\n"
                 f"💰 {data['old_price']:,} → {data['new_price']:,} so'm\n"
-                f"📉 Chegirma: {pct}%"
+                f"📉 Chegirma: {pct}%\n\n"
+                f"👇 Kanalga e'lon qilish uchun tugmani bosing"
             ).replace(",", " "),
             parse_mode="HTML",
-            reply_markup=main_keyboard()
+            reply_markup=publish_kb
         )
+        await msg.answer("Asosiy menyu:", reply_markup=main_keyboard())
     except Exception as e:
         logger.error(f"Rasm xatosi: {e}")
         await msg.answer("❌ Rasm yaratishda xato.", reply_markup=main_keyboard())
+
+
+@dp.callback_query(F.data.startswith("publish:"))
+async def publish_to_channel(cb: CallbackQuery):
+    parts = cb.data.split(":")
+    pid, old_price, new_price = int(parts[1]), int(parts[2]), int(parts[3])
+    p = get_product(pid)
+    if not p:
+        return await cb.answer("Mahsulot topilmadi.")
+    shop = get_shop_name(cb.from_user.id)
+    pct = round((old_price - new_price) / old_price * 100)
+    img_path = os.path.join(os.path.dirname(__file__), "generated", f"discount_{pid}.png")
+
+    from notifications import days_left, format_date
+    days = days_left(p["expires_at"])
+    qty = p.get("quantity", 1)
+
+    caption = (
+        f"🔥 <b>CHEGIRMA!</b>\n\n"
+        f"🏷 {p['name']}\n"
+        f"💰 <s>{old_price:,}</s> → <b>{new_price:,} so'm</b>\n"
+        f"📉 Chegirma: <b>-{pct}%</b>\n"
+        f"📦 Qolgan: {qty} dona\n"
+        f"⏰ Muddat: {format_date(p['expires_at'])} ({days} kun)\n\n"
+        f"🏪 {shop}"
+    ).replace(",", " ")
+
+    try:
+        if os.path.exists(img_path):
+            await cb.bot.send_photo(
+                chat_id=CHANNEL_ID,
+                photo=FSInputFile(img_path),
+                caption=caption,
+                parse_mode="HTML"
+            )
+        else:
+            await cb.bot.send_message(
+                chat_id=CHANNEL_ID, text=caption, parse_mode="HTML"
+            )
+        await cb.message.edit_reply_markup(reply_markup=None)
+        await cb.answer("✅ Kanalga yuborildi!", show_alert=True)
+        await cb.message.answer("📢 Chegirma kanalga e'lon qilindi!",
+                                 reply_markup=main_keyboard())
+    except Exception as e:
+        logger.error(f"Kanal xatosi: {e}")
+        await cb.answer("❌ Kanalga yuborishda xato. Bot admin ekanini tekshiring.",
+                        show_alert=True)
 
 
 # ──────────────────────────────────────────

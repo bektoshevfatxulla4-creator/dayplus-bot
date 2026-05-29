@@ -42,19 +42,27 @@ async def send_expiry_alert(bot, product: dict):
         f"⏰ <b>Tugash muddati:</b> {format_date(product['expires_at'])}\n"
         f"🏪 <b>Do'konga kelgan:</b> {format_date(product['arrived_at'])}\n\n"
         f"<b>{time_text}</b>\n\n"
-        f"💡 <i>Chegirma qo'yish uchun /discount {product['id']} buyrug'ini yuboring</i>"
+        f"💡 <i>Chegirma qo'yib kanalga e'lon qilasizmi?</i>"
     )
+
+    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+    kb = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="🎨 Chegirma qo'yish",
+                             callback_data=f"discount:{product['id']}")
+    ]])
 
     if product.get("photo_id"):
         await bot.send_photo(
             chat_id=product["user_id"],
             photo=product["photo_id"],
             caption=text,
-            parse_mode="HTML"
+            parse_mode="HTML",
+            reply_markup=kb
         )
     else:
         await bot.send_message(
             chat_id=product["user_id"],
             text=text,
-            parse_mode="HTML"
+            parse_mode="HTML",
+            reply_markup=kb
         )
