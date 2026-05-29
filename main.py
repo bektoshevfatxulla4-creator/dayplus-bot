@@ -916,10 +916,26 @@ async def keep_alive():
                 pass
 
 
+async def start_web_server():
+    """Render port ko'rishi uchun kichik web-server."""
+    from aiohttp import web
+    async def health(request):
+        return web.Response(text="Day+ bot ishlayapti ✅")
+    app = web.Application()
+    app.router.add_get("/", health)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    port = int(os.getenv("PORT", 10000))
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+    logger.info(f"🌐 Web server ishga tushdi (port {port})")
+
+
 async def main():
     init_db()
     start_scheduler(bot)
     logger.info("🚀 Day+ bot ishga tushdi")
+    await start_web_server()
     asyncio.create_task(keep_alive())
     await dp.start_polling(bot)
 
